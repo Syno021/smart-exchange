@@ -1,0 +1,24 @@
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=JetBrains+Mono:wght@400;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --sidebar-width: 260px;
+  --sidebar-collapsed: 64px;
+  --navbar-height: 64px;
+  --color-primary: #00843D;
+  --color-primary-hover: #005C2B;
+  --color-danger: #C8102E;
+  --color-warning: #F59E0B;
+}
+
+* { box-sizing: border-box; }
+body { font-family: 'DM Sans', sans-serif; background: #F7F8FA; color: #1A1D23; }
+h1, h2, h3, h4 { font-family: 'Sora', sans-serif; }
+.font-price { font-family: 'JetBrains Mono', monospace; }
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #F1F3F6; }
+::-webkit-scrollbar-thumb { background: #C5C9D0; border-radius: 3px; }
