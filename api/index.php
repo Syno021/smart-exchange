@@ -72,7 +72,8 @@ match (true) {
     $resource === 'suppliers' && $method === 'GET'  && $id === 'me' => SupplierController::me(),
     $resource === 'suppliers' && $method === 'GET'  && !$id => SupplierController::index(),
     $resource === 'suppliers' && $method === 'POST'          => SupplierController::store(),
-    $resource === 'suppliers' && $method === 'PUT'  && $id  => SupplierController::update((int)$id),
+    $resource === 'suppliers' && $method === 'PUT'    && $id  => SupplierController::update((int)$id),
+    $resource === 'suppliers' && $method === 'DELETE' && $id => SupplierController::destroy((int)$id),
 
     // CUSTOMERS
     $resource === 'customers' && $method === 'GET'  && !$id          => CustomerController::index(),
