@@ -5,6 +5,7 @@ import type {
   LoginPayload,
   LoginResponse,
   RegisterPayload,
+  ResetPasswordPayload,
 } from '../types/auth.types'
 
 export const authService = {
@@ -15,4 +16,7 @@ export const authService = {
     api.post<ApiResponse<{ user_id: number }>>('/auth/register', payload),
 
   me: () => api.get<ApiResponse<AuthUser>>('/auth/me'),
+
+  resetPassword: (payload: ResetPasswordPayload) =>
+    api.post<ApiResponse<null>>('/auth/reset-password', payload),
 }

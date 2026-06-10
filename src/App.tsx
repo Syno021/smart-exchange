@@ -6,6 +6,7 @@ import { ManagerLayout } from './layouts/ManagerLayout'
 import { CashierLayout } from './layouts/CashierLayout'
 import { CustomerLayout } from './layouts/CustomerLayout'
 import { SupplierLayout } from './layouts/SupplierLayout'
+import { ForgotPasswordPage } from './portals/auth/ForgotPasswordPage'
 import { LoginPage } from './portals/auth/LoginPage'
 import { RegisterPage } from './portals/auth/RegisterPage'
 import { ROLE_HOME } from './lib/rolePaths'
@@ -21,6 +22,7 @@ export default function App() {
       <Route element={<AuthLayout />}>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       </Route>
       <Route path="/admin/*" element={<AdminLayout />} />
       <Route path="/manager/*" element={<ManagerLayout />} />

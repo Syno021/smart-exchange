@@ -25,3 +25,9 @@ export interface RegisterPayload {
   email?: string
   password: string
 }
+
+export interface ResetPasswordPayload {
+  email: string
+  username: string
+  password: string
+}

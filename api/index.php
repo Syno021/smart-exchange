@@ -26,9 +26,10 @@ $action   = $segments[2] ?? null;
 
 match (true) {
     // AUTH
-    $resource === 'auth' && $id === 'login'    => AuthController::login(),
-    $resource === 'auth' && $id === 'register' => AuthController::register(),
-    $resource === 'auth' && $id === 'me'       => AuthController::me(),
+    $resource === 'auth' && $id === 'login'           => AuthController::login(),
+    $resource === 'auth' && $id === 'register'        => AuthController::register(),
+    $resource === 'auth' && $id === 'me'              => AuthController::me(),
+    $resource === 'auth' && $id === 'reset-password' => AuthController::resetPassword(),
 
     // USERS (admin)
     $resource === 'users' && $method === 'GET'    && !$id => UserController::index(),

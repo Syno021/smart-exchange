@@ -66,6 +66,12 @@ export function LoginPage() {
           {...register('password')}
         />
 
+        <div className="flex justify-end">
+          <Link to="/forgot-password" className="text-sm font-medium text-brand-600 hover:text-brand-700">
+            Forgot password?
+          </Link>
+        </div>
+
         {serverError && (
           <p className="rounded-lg bg-danger-100 px-3 py-2 text-sm text-danger-600">{serverError}</p>
         )}

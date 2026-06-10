@@ -64,4 +64,40 @@ class AuthController {
         if (!$user) Response::error('User not found', 404);
         Response::success($user);
     }
+
+    public static function resetPassword(): void {
+        $body     = json_decode(file_get_contents('php://input'), true);
+        $email    = trim($body['email'] ?? '');
+        $username = trim($body['username'] ?? '');
+        $password = $body['password'] ?? '';
+
+        if (!$email || !$username || !$password) {
+            Response::error('Email, username, and password are required');
+        }
+        if (!Validator::email($email)) {
+            Response::error('Invalid email address');
+        }
+        if (!Validator::strongPassword($password)) {
+            Response::error(
+                'Password must be at least 8 characters and include uppercase, lowercase, a number, and a special character'
+            );
+        }
+
+        $db   = Database::getInstance();
+        $stmt = $db->prepare(
+            'SELECT user_id FROM users WHERE username = ? AND email = ? AND is_active = 1 LIMIT 1'
+        );
+        $stmt->execute([$username, $email]);
+        $user = $stmt->fetch();
+
+        if (!$user) {
+            Response::error('No account found with that email and username', 404);
+        }
+
+        $hash = password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
+        $db->prepare('UPDATE users SET password = ? WHERE user_id = ?')
+            ->execute([$hash, $user['user_id']]);
+
+        Response::success(null, 'Password reset successful. You can now sign in.');
+    }
 }
