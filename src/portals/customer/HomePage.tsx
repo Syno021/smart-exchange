@@ -146,8 +146,16 @@ export function HomePage() {
                   'flex items-center gap-4 rounded-lg border border-gray-100 bg-white p-4 shadow-card transition-shadow hover:shadow-md',
                 )}
               >
-                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-2xl">
-                  📦
+                <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-brand-50">
+                  {product.image_url ? (
+                    <img
+                      src={product.image_url}
+                      alt={product.name}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-2xl">📦</span>
+                  )}
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="font-medium text-gray-900">{product.name}</p>

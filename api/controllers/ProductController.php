@@ -71,9 +71,9 @@ class ProductController {
 
         $stmt = $db->prepare('
             INSERT INTO products
-              (category_id, supplier_id, barcode, sku, name, description,
+              (category_id, supplier_id, barcode, sku, name, description, image_url,
                unit, cost_price, selling_price, stock_qty, reorder_level, max_stock, is_featured)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         ');
         $stmt->execute([
             $body['category_id'],
@@ -82,6 +82,7 @@ class ProductController {
             $body['sku']           ?? null,
             $body['name'],
             $body['description']   ?? null,
+            self::normalizeImageUrl($body['image_url'] ?? null),
             $body['unit']          ?? 'each',
             $body['cost_price']    ?? 0,
             $body['selling_price'],
@@ -116,7 +117,7 @@ class ProductController {
         $db->prepare('
             UPDATE products SET
               category_id=?, supplier_id=?, barcode=?, sku=?, name=?,
-              description=?, unit=?, cost_price=?, selling_price=?,
+              description=?, image_url=?, unit=?, cost_price=?, selling_price=?,
               reorder_level=?, max_stock=?, is_active=?, is_featured=?
             WHERE product_id=?
         ')->execute([
@@ -126,6 +127,9 @@ class ProductController {
             $body['sku']           ?? $before['sku'],
             $body['name']          ?? $before['name'],
             $body['description']   ?? $before['description'],
+            array_key_exists('image_url', $body)
+                ? self::normalizeImageUrl($body['image_url'])
+                : $before['image_url'],
             $body['unit']          ?? $before['unit'],
             $body['cost_price']    ?? $before['cost_price'],
             $body['selling_price'] ?? $before['selling_price'],
@@ -153,5 +157,27 @@ class ProductController {
         $db   = Database::getInstance();
         $stmt = $db->query('SELECT p.*, c.name AS category_name, s.company_name AS supplier_name FROM products p LEFT JOIN categories c ON p.category_id = c.category_id LEFT JOIN suppliers s ON p.supplier_id = s.supplier_id WHERE p.stock_qty <= p.reorder_level AND p.is_active = 1 ORDER BY p.stock_qty ASC');
         Response::success($stmt->fetchAll());
+    }
+
+    private static function normalizeImageUrl(mixed $value): ?string {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        $url = trim((string) $value);
+
+        if ($url === '') {
+            return null;
+        }
+
+        if (strlen($url) > 255) {
+            Response::error('image_url must be 255 characters or less');
+        }
+
+        if (!filter_var($url, FILTER_VALIDATE_URL)) {
+            Response::error('image_url must be a valid URL');
+        }
+
+        return $url;
     }
 }

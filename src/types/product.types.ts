@@ -34,6 +34,7 @@ export interface ProductFormData {
   reorder_level: number
   max_stock: number
   description?: string
+  image_url?: string
   is_active: boolean
   is_featured: boolean
 }
