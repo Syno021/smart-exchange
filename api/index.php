@@ -37,6 +37,9 @@ match (true) {
     $resource === 'users' && $method === 'PUT'    && $id   => UserController::update((int)$id),
     $resource === 'users' && $method === 'DELETE' && $id   => UserController::destroy((int)$id),
 
+    // UPLOADS
+    $resource === 'uploads' && $id === 'product-image' && $method === 'POST' => UploadController::productImage(),
+
     // PRODUCTS
     $resource === 'products' && $method === 'GET'    && $id === 'low-stock' => ProductController::lowStock(),
     $resource === 'products' && $method === 'GET'    && !$id                => ProductController::index(),

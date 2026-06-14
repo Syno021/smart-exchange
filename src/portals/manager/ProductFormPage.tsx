@@ -10,6 +10,7 @@ import {
   CardContent,
   Input,
   PageHeader,
+  ProductImageInput,
   SelectField,
   useToast,
 } from '@/components'
@@ -29,6 +30,11 @@ const productSchema = z.object({
   reorder_level: z.number().int().min(0),
   max_stock: z.number().int().min(0),
   description: z.string().optional(),
+  image_url: z
+    .string()
+    .optional()
+    .refine((val) => !val || val.length <= 255, 'URL must be 255 characters or less')
+    .refine((val) => !val || /^https?:\/\/.+/i.test(val), 'Enter a valid http(s) URL'),
   is_active: z.boolean(),
   is_featured: z.boolean(),
 })
@@ -84,6 +90,7 @@ export function ProductFormPage() {
       stock_qty: 0,
       reorder_level: 10,
       max_stock: 100,
+      image_url: '',
       is_active: true,
       is_featured: false,
     },
@@ -105,6 +112,7 @@ export function ProductFormPage() {
         reorder_level: p.reorder_level,
         max_stock: p.max_stock,
         description: p.description ?? '',
+        image_url: p.image_url ?? '',
         is_active: p.is_active,
         is_featured: p.is_featured,
       })
@@ -119,6 +127,7 @@ export function ProductFormPage() {
         sku: values.sku || undefined,
         supplier_id: values.supplier_id || undefined,
         description: values.description || undefined,
+        image_url: values.image_url?.trim() || undefined,
       }
       if (isEdit) {
         await productService.update(Number(id), payload)
@@ -141,6 +150,7 @@ export function ProductFormPage() {
 
   const categoryId = watch('category_id')
   const supplierId = watch('supplier_id')
+  const imageUrl = watch('image_url')
 
   const categoryOptions = (categoriesQuery.data ?? []).map((c) => ({
     value: String(c.category_id),
@@ -244,6 +254,12 @@ export function ProductFormPage() {
                 {...register('description')}
               />
             </div>
+
+            <ProductImageInput
+              value={imageUrl ?? ''}
+              onChange={(url) => setValue('image_url', url, { shouldValidate: true })}
+              error={errors.image_url?.message}
+            />
 
             <div className="flex flex-wrap gap-6">
               <label className="flex items-center gap-2 text-sm">
