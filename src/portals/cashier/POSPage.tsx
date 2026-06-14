@@ -18,7 +18,6 @@ import {
   Input,
   Modal,
   RandAmount,
-  SelectField,
   useToast,
 } from '@/components'
 import { customerService } from '@/services/customer.service'
@@ -268,10 +267,10 @@ export function POSPage() {
   const changeDue = Math.max(0, (parseFloat(amountPaid) || total()) - total())
 
   return (
-    <div className="flex h-[calc(100vh-8rem)] flex-col gap-4 lg:flex-row">
+    <div className="flex h-[calc(100vh-var(--navbar-height))] min-h-0 flex-col gap-3 overflow-hidden p-4 lg:flex-row">
       {/* Left — product search & grid */}
-      <div className="flex min-h-0 flex-1 flex-col">
-        <div className="mb-3 flex items-center gap-2">
+      <div className="flex min-h-0 flex-col lg:min-h-0 lg:flex-1">
+        <div className="mb-2 flex shrink-0 items-center gap-2">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <input
@@ -289,7 +288,7 @@ export function POSPage() {
           </Badge>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-gray-100 bg-white p-3">
+        <div className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-gray-100 bg-white p-3 max-h-[42vh] lg:max-h-none">
           {productsQuery.isLoading ? (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
               {Array.from({ length: 8 }).map((_, i) => (
@@ -339,14 +338,14 @@ export function POSPage() {
           )}
         </div>
 
-        <p className="mt-2 text-xs text-gray-400">
+        <p className="mt-1 shrink-0 text-xs text-gray-400">
           F2 Search · F4 Customer · F8 Discount · F12 Complete · Esc Clear cart
         </p>
       </div>
 
       {/* Right — cart & checkout */}
-      <Card className="flex w-full shrink-0 flex-col lg:w-[380px]">
-        <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
+      <Card className="flex min-h-0 flex-1 flex-col overflow-hidden lg:max-h-full lg:w-[360px] lg:flex-none lg:shrink-0">
+        <div className="flex shrink-0 items-center justify-between border-b border-gray-100 px-3 py-2">
           <h2 className="font-display font-semibold text-gray-900">Current Sale</h2>
           {items.length > 0 && (
             <Button variant="ghost" size="sm" onClick={() => setClearConfirmOpen(true)}>
@@ -357,7 +356,7 @@ export function POSPage() {
         </div>
 
         {selectedCustomer && (
-          <div className="flex items-center justify-between border-b border-gray-100 bg-brand-50/50 px-4 py-2">
+          <div className="flex shrink-0 items-center justify-between border-b border-gray-100 bg-brand-50/50 px-3 py-1.5">
             <div className="flex items-center gap-2 text-sm">
               <User className="h-4 w-4 text-brand-600" />
               <span className="font-medium text-gray-900">{selectedCustomer.full_name}</span>
@@ -369,22 +368,22 @@ export function POSPage() {
           </div>
         )}
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-2">
+        <div className="min-h-0 flex-1 overflow-y-auto px-3 py-1">
           {items.length === 0 ? (
-            <EmptyState title="Cart is empty" description="Search or click products to add items." className="border-0 py-8" />
+            <EmptyState title="Cart is empty" description="Search or click products to add items." className="border-0 py-6" />
           ) : (
             <ul className="divide-y divide-gray-50">
               {items.map((item) => (
-                <li key={item.product_id} className="flex items-center gap-2 py-3">
+                <li key={item.product_id} className="flex items-center gap-1.5 py-2">
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium text-gray-900">{item.name}</p>
                     <RandAmount amount={item.unit_price} className="text-xs text-gray-500" />
                   </div>
-                  <div className="flex items-center gap-1">
+                  <div className="flex shrink-0 items-center gap-0.5">
                     <Button variant="outline" size="sm" className="h-7 w-7 p-0" onClick={() => updateQty(item.product_id, -1)}>
                       <Minus className="h-3 w-3" />
                     </Button>
-                    <span className="w-8 text-center text-sm font-medium">{item.qty}</span>
+                    <span className="w-7 text-center text-sm font-medium">{item.qty}</span>
                     <Button
                       variant="outline"
                       size="sm"
@@ -395,8 +394,8 @@ export function POSPage() {
                       <Plus className="h-3 w-3" />
                     </Button>
                   </div>
-                  <RandAmount amount={item.line_total} className="w-20 text-right text-sm font-medium" />
-                  <button type="button" onClick={() => removeItem(item.product_id)} className="rounded p-1 text-gray-400 hover:text-danger-600">
+                  <RandAmount amount={item.line_total} className="w-16 shrink-0 text-right text-sm font-medium" />
+                  <button type="button" onClick={() => removeItem(item.product_id)} className="shrink-0 rounded p-1 text-gray-400 hover:text-danger-600">
                     <X className="h-4 w-4" />
                   </button>
                 </li>
@@ -405,36 +404,53 @@ export function POSPage() {
           )}
         </div>
 
-        <div className="space-y-3 border-t border-gray-100 px-4 py-4">
-          <Input
-            ref={discountRef}
-            label="Discount (R)"
-            type="number"
-            min={0}
-            step="0.01"
-            value={discount || ''}
-            onChange={(e) => setDiscount(Math.max(0, parseFloat(e.target.value) || 0))}
-            placeholder="0.00 (F8)"
-          />
+        <div className="shrink-0 space-y-2 border-t border-gray-100 px-3 py-2">
+          <div>
+            <p className="mb-1 text-xs font-medium text-gray-500">Payment</p>
+            <div className="grid grid-cols-4 gap-1">
+              {PAYMENT_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setPaymentMethod(option.value as PaymentMethod)}
+                  className={cn(
+                    'rounded border px-1 py-1.5 text-[11px] font-medium transition-colors',
+                    paymentMethod === option.value
+                      ? 'border-brand-600 bg-brand-50 text-brand-700'
+                      : 'border-gray-200 bg-white text-gray-600 hover:border-brand-200',
+                  )}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </div>
 
-          <SelectField
-            label="Payment method"
-            value={paymentMethod}
-            onValueChange={(v) => setPaymentMethod(v as PaymentMethod)}
-            options={PAYMENT_OPTIONS}
-          />
+          <div className="grid grid-cols-2 gap-2">
+            <Input
+              ref={discountRef}
+              label="Discount (R)"
+              type="number"
+              min={0}
+              step="0.01"
+              value={discount || ''}
+              onChange={(e) => setDiscount(Math.max(0, parseFloat(e.target.value) || 0))}
+              placeholder="0.00"
+              className="h-8 px-2 py-1 text-sm"
+            />
+            <Input
+              label="Amount paid"
+              type="number"
+              min={0}
+              step="0.01"
+              value={amountPaid}
+              onChange={(e) => setAmountPaid(e.target.value)}
+              placeholder={total().toFixed(2)}
+              className="h-8 px-2 py-1 text-sm"
+            />
+          </div>
 
-          <Input
-            label="Amount paid"
-            type="number"
-            min={0}
-            step="0.01"
-            value={amountPaid}
-            onChange={(e) => setAmountPaid(e.target.value)}
-            placeholder={total().toFixed(2)}
-          />
-
-          <div className="space-y-1 text-sm">
+          <div className="space-y-0.5 text-xs">
             <div className="flex justify-between text-gray-600">
               <span>Subtotal</span>
               <RandAmount amount={subtotal()} />
@@ -449,7 +465,7 @@ export function POSPage() {
               <span>VAT (15%)</span>
               <RandAmount amount={tax()} />
             </div>
-            <div className="flex justify-between text-lg font-bold text-gray-900">
+            <div className="flex justify-between text-base font-bold text-gray-900">
               <span>Total</span>
               <RandAmount amount={total()} />
             </div>
@@ -462,7 +478,6 @@ export function POSPage() {
           </div>
 
           <Button
-            size="lg"
             className="w-full"
             onClick={handleCompleteSale}
             loading={completeSaleMutation.isPending}

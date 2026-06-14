@@ -13,4 +13,6 @@ export const supplierService = {
 
   update: (id: number, payload: Partial<SupplierFormData>) =>
     api.put<ApiResponse<null>>(`/suppliers/${id}`, payload),
+
+  delete: (id: number) => api.delete<ApiResponse<null>>(`/suppliers/${id}`),
 }

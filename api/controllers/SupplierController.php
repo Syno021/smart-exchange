@@ -126,4 +126,19 @@ class SupplierController {
         AuditLogger::log($payload['user_id'], 'UPDATE', 'suppliers', $id, $before, $body);
         Response::success(null, 'Supplier updated');
     }
+
+    public static function destroy(int $id): void {
+        $payload = AuthMiddleware::handle();
+        RoleMiddleware::require($payload, ['admin', 'manager']);
+
+        $db = Database::getInstance();
+        $stmt = $db->prepare('SELECT * FROM suppliers WHERE supplier_id = ?');
+        $stmt->execute([$id]);
+        $supplier = $stmt->fetch();
+        if (!$supplier) Response::error('Supplier not found', 404);
+
+        $db->prepare('UPDATE suppliers SET is_active = 0 WHERE supplier_id = ?')->execute([$id]);
+        AuditLogger::log($payload['user_id'], 'DELETE', 'suppliers', $id, $supplier, null);
+        Response::success(null, 'Supplier deleted');
+    }
 }

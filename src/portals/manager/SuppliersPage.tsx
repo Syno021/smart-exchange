@@ -1,11 +1,12 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Pencil, Plus } from 'lucide-react'
+import { Pencil, Plus, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import {
   Button,
+  ConfirmDialog,
   DataTable,
   Input,
   Modal,
@@ -36,6 +37,7 @@ export function SuppliersPage() {
   const queryClient = useQueryClient()
   const [modalOpen, setModalOpen] = useState(false)
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<Supplier | null>(null)
 
   const suppliersQuery = useQuery({
     queryKey: ['suppliers'],
@@ -108,6 +110,16 @@ export function SuppliersPage() {
     onError: () => toast({ title: 'Failed to save supplier', variant: 'error' }),
   })
 
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => supplierService.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['suppliers'] })
+      toast({ title: 'Supplier deleted', variant: 'success' })
+      setDeleteTarget(null)
+    },
+    onError: () => toast({ title: 'Failed to delete supplier', variant: 'error' }),
+  })
+
   const columns = useMemo<ColumnDef<Supplier>[]>(
     () => [
       {
@@ -156,9 +168,19 @@ export function SuppliersPage() {
         id: 'actions',
         header: '',
         cell: ({ row }) => (
-          <Button variant="ghost" size="sm" onClick={() => openEdit(row.original)}>
-            <Pencil className="h-4 w-4" />
-          </Button>
+          <div className="flex justify-end gap-1">
+            <Button variant="ghost" size="sm" aria-label="Edit" onClick={() => openEdit(row.original)}>
+              <Pencil className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-label="Delete"
+              onClick={() => setDeleteTarget(row.original)}
+            >
+              <Trash2 className="h-4 w-4 text-danger-600" />
+            </Button>
+          </div>
         ),
       },
     ],
@@ -227,6 +249,17 @@ export function SuppliersPage() {
           </div>
         </form>
       </Modal>
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="Delete supplier"
+        description={`Are you sure you want to delete "${deleteTarget?.company_name}"? This supplier will be removed from active lists.`}
+        confirmLabel="Delete"
+        variant="danger"
+        isLoading={deleteMutation.isPending}
+        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.supplier_id)}
+      />
     </div>
   )
 }
