@@ -10,6 +10,7 @@ import {
   type ColumnDef,
 } from '@/components'
 import { formatDate } from '@/lib/utils'
+import { todayIso } from '@/lib/validation'
 import { auditService } from '@/services/audit.service'
 import type { AuditLogEntry } from '@/types/api.types'
 
@@ -151,6 +152,7 @@ export function SystemActivityPage() {
           label="From"
           type="date"
           value={dateFrom}
+          max={todayIso()}
           onChange={(e) => {
             setDateFrom(e.target.value)
             setPage(1)
@@ -161,6 +163,7 @@ export function SystemActivityPage() {
           label="To"
           type="date"
           value={dateTo}
+          max={todayIso()}
           onChange={(e) => {
             setDateTo(e.target.value)
             setPage(1)

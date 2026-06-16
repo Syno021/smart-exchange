@@ -6,23 +6,23 @@ import { z } from 'zod'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { authService } from '../../services/auth.service'
+import {
+  emailOptionalSchema,
+  fullNameSchema,
+  phoneSchema,
+  strongPasswordSchema,
+  usernameSchema,
+} from '../../lib/validation'
 import type { AxiosError } from 'axios'
 import type { ApiResponse } from '../../types/api.types'
 
 const registerSchema = z
   .object({
-    full_name: z.string().min(2, 'Full name must be at least 2 characters'),
-    username: z
-      .string()
-      .min(3, 'Username must be at least 3 characters')
-      .max(50, 'Username is too long')
-      .regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores'),
-    email: z.string().email('Invalid email address').optional().or(z.literal('')),
-    password: z
-      .string()
-      .min(8, 'Password must be at least 8 characters')
-      .regex(/[A-Z]/, 'Must contain an uppercase letter')
-      .regex(/[0-9]/, 'Must contain a number'),
+    full_name: fullNameSchema,
+    username: usernameSchema,
+    email: emailOptionalSchema,
+    phone: phoneSchema,
+    password: strongPasswordSchema,
     confirm_password: z.string(),
   })
   .refine((data) => data.password === data.confirm_password, {
@@ -47,6 +47,7 @@ export function RegisterPage() {
       full_name: '',
       username: '',
       email: '',
+      phone: '',
       password: '',
       confirm_password: '',
     },
@@ -59,6 +60,7 @@ export function RegisterPage() {
         full_name: values.full_name,
         username: values.username,
         email: values.email || undefined,
+        phone: values.phone,
         password: values.password,
       })
       setSuccess(true)
@@ -104,6 +106,14 @@ export function RegisterPage() {
           autoComplete="email"
           error={errors.email?.message}
           {...register('email')}
+        />
+        <Input
+          label="Phone"
+          placeholder="0XXXXXXXXX"
+          maxLength={10}
+          autoComplete="tel"
+          error={errors.phone?.message}
+          {...register('phone')}
         />
         <Input
           label="Password"

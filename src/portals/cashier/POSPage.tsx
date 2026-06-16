@@ -28,13 +28,13 @@ import type { Customer } from '@/types/customer.types'
 import type { Product } from '@/types/product.types'
 import type { PaymentMethod } from '@/types/sale.types'
 import { cn, toNumber } from '@/lib/utils'
+import { canPayWithLoyalty, loyaltyShortfallMessage, pointsRequiredForTotal } from '@/lib/loyalty'
 import { decrementProductStockInCache } from '@/lib/productStockCache'
 import { ReceiptModal, type ReceiptData } from './ReceiptModal'
 
 const PAYMENT_OPTIONS = [
   { value: 'cash', label: 'Cash' },
   { value: 'card', label: 'Card' },
-  { value: 'ewallet', label: 'E-Wallet' },
   { value: 'loyalty', label: 'Loyalty Points' },
 ]
 
@@ -199,12 +199,50 @@ export function POSPage() {
     }
 
     const totalAmt = total()
-    const paid = parseFloat(amountPaid) || totalAmt
 
-    if (paymentMethod === 'cash' && paid < totalAmt) {
-      toast({ title: 'Insufficient payment', description: 'Amount paid must cover the total.', variant: 'warning' })
-      return
+    if (paymentMethod === 'loyalty') {
+      if (!customerId || !selectedCustomer) {
+        toast({
+          title: 'Customer required',
+          description: 'Link a loyalty customer (F4) before paying with points.',
+          variant: 'warning',
+        })
+        return
+      }
+      if (!canPayWithLoyalty(selectedCustomer.loyalty_points, totalAmt)) {
+        toast({
+          title: 'Insufficient loyalty points',
+          description: loyaltyShortfallMessage(selectedCustomer.loyalty_points, totalAmt),
+          variant: 'warning',
+        })
+        return
+      }
     }
+
+    if (paymentMethod === 'cash') {
+      if (!amountPaid.trim()) {
+        toast({
+          title: 'Cash amount required',
+          description: 'Enter the amount of cash received from the customer.',
+          variant: 'warning',
+        })
+        return
+      }
+      const paid = parseFloat(amountPaid)
+      if (Number.isNaN(paid) || paid <= 0) {
+        toast({ title: 'Invalid amount', description: 'Enter a valid cash amount.', variant: 'warning' })
+        return
+      }
+      if (paid < totalAmt) {
+        toast({ title: 'Insufficient payment', description: 'Amount paid must cover the total.', variant: 'warning' })
+        return
+      }
+    }
+
+    const paid =
+      paymentMethod === 'cash'
+        ? parseFloat(amountPaid)
+        : parseFloat(amountPaid) || totalAmt
 
     completeSaleMutation.mutate({
       items: items.map((i) => ({
@@ -219,7 +257,7 @@ export function POSPage() {
       amount_paid: paid,
       payment_method: paymentMethod,
     })
-  }, [items, total, amountPaid, paymentMethod, customerId, discount, completeSaleMutation, toast])
+  }, [items, total, amountPaid, paymentMethod, customerId, selectedCustomer, discount, completeSaleMutation, toast])
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -249,6 +287,22 @@ export function POSPage() {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [handleCompleteSale, items.length, clearConfirmOpen, customerModalOpen, receiptOpen])
 
+  useEffect(() => {
+    if (
+      paymentMethod === 'loyalty' &&
+      selectedCustomer &&
+      items.length > 0 &&
+      !canPayWithLoyalty(selectedCustomer.loyalty_points, total())
+    ) {
+      setPaymentMethod('cash')
+      toast({
+        title: 'Loyalty payment unavailable',
+        description: loyaltyShortfallMessage(selectedCustomer.loyalty_points, total()),
+        variant: 'warning',
+      })
+    }
+  }, [items, discount, paymentMethod, selectedCustomer, total, toast])
+
   const handleSelectCustomer = (customer: Customer) => {
     setSelectedCustomer(customer)
     setCustomer(customer.customer_id)
@@ -260,11 +314,43 @@ export function POSPage() {
   const handleClearCustomer = () => {
     setSelectedCustomer(null)
     setCustomer(null)
+    if (paymentMethod === 'loyalty') {
+      setPaymentMethod('cash')
+    }
   }
 
   const products = productsQuery.data ?? []
+  const totalAmt = total()
+  const loyaltyPointsAvailable = selectedCustomer?.loyalty_points ?? 0
+  const loyaltyQualified = canPayWithLoyalty(loyaltyPointsAvailable, totalAmt)
 
-  const changeDue = Math.max(0, (parseFloat(amountPaid) || total()) - total())
+  const handlePaymentMethodChange = (method: PaymentMethod) => {
+    if (method === 'loyalty') {
+      if (!customerId || !selectedCustomer) {
+        toast({
+          title: 'Customer required',
+          description: 'Link a loyalty customer (F4) to pay with points.',
+          variant: 'warning',
+        })
+        setCustomerModalOpen(true)
+        return
+      }
+      if (!canPayWithLoyalty(selectedCustomer.loyalty_points, totalAmt)) {
+        toast({
+          title: 'Insufficient loyalty points',
+          description: loyaltyShortfallMessage(selectedCustomer.loyalty_points, totalAmt),
+          variant: 'warning',
+        })
+        return
+      }
+    }
+    setPaymentMethod(method)
+  }
+
+  const changeDue =
+    paymentMethod === 'cash' && amountPaid.trim()
+      ? Math.max(0, parseFloat(amountPaid) - total())
+      : 0
 
   return (
     <div className="flex h-[calc(100vh-var(--navbar-height))] min-h-0 flex-col gap-3 overflow-hidden p-4 lg:flex-row">
@@ -407,23 +493,38 @@ export function POSPage() {
         <div className="shrink-0 space-y-2 border-t border-gray-100 px-3 py-2">
           <div>
             <p className="mb-1 text-xs font-medium text-gray-500">Payment</p>
-            <div className="grid grid-cols-4 gap-1">
-              {PAYMENT_OPTIONS.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => setPaymentMethod(option.value as PaymentMethod)}
-                  className={cn(
-                    'rounded border px-1 py-1.5 text-[11px] font-medium transition-colors',
-                    paymentMethod === option.value
-                      ? 'border-brand-600 bg-brand-50 text-brand-700'
-                      : 'border-gray-200 bg-white text-gray-600 hover:border-brand-200',
-                  )}
-                >
-                  {option.label}
-                </button>
-              ))}
+            <div className="grid grid-cols-3 gap-1">
+              {PAYMENT_OPTIONS.map((option) => {
+                const isLoyalty = option.value === 'loyalty'
+                const disabled = isLoyalty && (!customerId || !loyaltyQualified)
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    disabled={disabled}
+                    onClick={() => handlePaymentMethodChange(option.value as PaymentMethod)}
+                    className={cn(
+                      'rounded border px-1 py-1.5 text-[11px] font-medium transition-colors',
+                      paymentMethod === option.value
+                        ? 'border-brand-600 bg-brand-50 text-brand-700'
+                        : 'border-gray-200 bg-white text-gray-600 hover:border-brand-200',
+                      disabled && 'cursor-not-allowed opacity-50 hover:border-gray-200',
+                    )}
+                  >
+                    {option.label}
+                  </button>
+                )
+              })}
             </div>
+            {paymentMethod === 'loyalty' && selectedCustomer && (
+              <p className="mt-1 text-[10px] text-brand-700">
+                Redeeming {pointsRequiredForTotal(totalAmt).toLocaleString()} pts ·{' '}
+                {loyaltyPointsAvailable.toLocaleString()} available
+              </p>
+            )}
+            {!customerId && (
+              <p className="mt-1 text-[10px] text-gray-400">Link a customer (F4) to use loyalty points</p>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-2">
@@ -439,13 +540,14 @@ export function POSPage() {
               className="h-8 px-2 py-1 text-sm"
             />
             <Input
-              label="Amount paid"
+              label={paymentMethod === 'cash' ? 'Cash received *' : 'Amount paid'}
               type="number"
               min={0}
               step="0.01"
               value={amountPaid}
               onChange={(e) => setAmountPaid(e.target.value)}
-              placeholder={total().toFixed(2)}
+              placeholder={paymentMethod === 'cash' ? '0.00' : total().toFixed(2)}
+              required={paymentMethod === 'cash'}
               className="h-8 px-2 py-1 text-sm"
             />
           </div>
@@ -469,7 +571,7 @@ export function POSPage() {
               <span>Total</span>
               <RandAmount amount={total()} />
             </div>
-            {paymentMethod === 'cash' && amountPaid && (
+            {paymentMethod === 'cash' && (
               <div className="flex justify-between font-medium text-brand-700">
                 <span>Change</span>
                 <RandAmount amount={changeDue} />

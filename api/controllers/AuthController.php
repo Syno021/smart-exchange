@@ -33,24 +33,49 @@ class AuthController {
         $name  = trim($body['full_name'] ?? '');
         $uname = trim($body['username']  ?? '');
         $email = trim($body['email']     ?? '');
+        $phone = trim($body['phone']     ?? '');
         $pass  = $body['password']       ?? '';
 
-        if (!$name || !$uname || !$pass) Response::error('Required fields missing');
+        if (!$name || !$uname || !$pass || !$phone) {
+            Response::error('Full name, username, phone, and password are required');
+        }
+        if (strlen($uname) < 3) {
+            Response::error('Username must be at least 3 characters', 422);
+        }
+        if (!preg_match('/^[a-zA-Z0-9_]+$/', $uname)) {
+            Response::error('Username can only contain letters, numbers, and underscores', 422);
+        }
+        if (!empty($email) && !Validator::email($email)) {
+            Response::error('Invalid email address', 422);
+        }
+        if (!Validator::phone($phone)) {
+            Response::error('Phone must be exactly 10 digits and start with 0', 422);
+        }
+        if (!Validator::strongPassword($pass)) {
+            Response::error(
+                'Password must be at least 8 characters with uppercase, lowercase, number, and special character',
+                422
+            );
+        }
 
         $db   = Database::getInstance();
+        if (Validator::isPhoneTaken($db, $phone)) {
+            Response::error('This phone number is already registered', 409);
+        }
+
         $hash = password_hash($pass, PASSWORD_BCRYPT, ['cost' => 12]);
 
         try {
             $db->prepare(
-                'INSERT INTO users (full_name, username, email, password, role) VALUES (?,?,?,?,?)'
-            )->execute([$name, $uname, $email ?: null, $hash, 'customer']);
+                'INSERT INTO users (full_name, username, email, phone, password, role) VALUES (?,?,?,?,?,?)'
+            )->execute([$name, $uname, $email ?: null, $phone, $hash, 'customer']);
 
             $userId = (int) $db->lastInsertId();
             $db->prepare('INSERT INTO customers (user_id) VALUES (?)')->execute([$userId]);
 
             Response::success(['user_id' => $userId], 'Registration successful', 201);
         } catch (PDOException $e) {
-            if ($e->getCode() === '23000') Response::error('Username or email already taken', 409);
+            if ($e->getCode() === '23000') Response::error('Username, email, or phone already taken', 409);
             Response::error('Registration failed', 500);
         }
     }

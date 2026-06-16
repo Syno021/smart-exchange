@@ -23,6 +23,7 @@ export interface RegisterPayload {
   full_name: string
   username: string
   email?: string
+  phone: string
   password: string
 }
 

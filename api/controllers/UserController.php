@@ -66,7 +66,24 @@ class UserController {
             );
         }
 
+        $phone = isset($body['phone']) ? trim($body['phone']) : '';
+        if (!Validator::phone($phone)) {
+            Response::error('Phone must be exactly 10 digits and start with 0', 422);
+        }
+
         $db = Database::getInstance();
+        if (Validator::isPhoneTaken($db, $phone)) {
+            Response::error('This phone number is already registered', 409);
+        }
+
+        $username = trim($body['username']);
+        if (strlen($username) < 3) {
+            Response::error('Username must be at least 3 characters', 422);
+        }
+        if (!preg_match('/^[a-zA-Z0-9_]+$/', $username)) {
+            Response::error('Username can only contain letters, numbers, and underscores', 422);
+        }
+
         $hash = password_hash($body['password'], PASSWORD_BCRYPT, ['cost' => 12]);
 
         try {
@@ -74,9 +91,9 @@ class UserController {
                 'INSERT INTO users (full_name, username, email, phone, password, role, is_active) VALUES (?,?,?,?,?,?,?)'
             )->execute([
                 trim($body['full_name']),
-                trim($body['username']),
+                $username,
                 !empty($body['email']) ? trim($body['email']) : null,
-                $body['phone'] ?? null,
+                $phone,
                 $hash,
                 $body['role'],
                 $body['is_active'] ?? 1,
@@ -97,7 +114,7 @@ class UserController {
             ]);
             Response::success(['user_id' => $userId], 'User created', 201);
         } catch (PDOException $e) {
-            if ($e->getCode() === '23000') Response::error('Username or email already taken', 409);
+            if ($e->getCode() === '23000') Response::error('Username, email, or phone already taken', 409);
             Response::error('User creation failed', 500);
         }
     }
@@ -119,6 +136,28 @@ class UserController {
         }
         if (!empty($body['email']) && !Validator::email($body['email'])) {
             Response::error('Invalid email address');
+        }
+
+        if (array_key_exists('phone', $body)) {
+            $phone = trim($body['phone'] ?? '');
+            if (!Validator::phone($phone)) {
+                Response::error('Phone must be exactly 10 digits and start with 0', 422);
+            }
+            if (Validator::isPhoneTaken($db, $phone, $id)) {
+                Response::error('This phone number is already registered', 409);
+            }
+            $body['phone'] = $phone;
+        }
+
+        if (isset($body['username'])) {
+            $username = trim($body['username']);
+            if (strlen($username) < 3) {
+                Response::error('Username must be at least 3 characters', 422);
+            }
+            if (!preg_match('/^[a-zA-Z0-9_]+$/', $username)) {
+                Response::error('Username can only contain letters, numbers, and underscores', 422);
+            }
+            $body['username'] = $username;
         }
 
         $fields = [];

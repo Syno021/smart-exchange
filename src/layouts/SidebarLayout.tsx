@@ -64,7 +64,7 @@ export function SidebarLayout({ role, navItems, theme, children }: SidebarLayout
         </div>
 
         <nav className="flex-1 space-y-1 overflow-y-auto p-3">
-          {navItems.map(({ label, path, icon: Icon }) => (
+          {navItems.map(({ label, path, icon: Icon, badge }) => (
             <NavLink
               key={path}
               to={path}
@@ -77,7 +77,7 @@ export function SidebarLayout({ role, navItems, theme, children }: SidebarLayout
               {({ isActive }) => (
                 <span
                   className={cn(
-                    'flex items-center gap-3 px-3 py-2.5 text-sm font-medium',
+                    'relative flex items-center gap-3 px-3 py-2.5 text-sm font-medium',
                     sidebarCollapsed && 'justify-center px-2',
                     isActive && 'shadow-sm',
                   )}
@@ -89,6 +89,16 @@ export function SidebarLayout({ role, navItems, theme, children }: SidebarLayout
                 >
                   <Icon className="h-5 w-5 shrink-0" />
                   {!sidebarCollapsed && <span>{label}</span>}
+                  {badge != null && badge > 0 && (
+                    <span
+                      className={cn(
+                        'flex h-5 min-w-5 items-center justify-center rounded-full bg-danger-600 px-1.5 text-[10px] font-bold text-white',
+                        sidebarCollapsed && 'absolute -right-0.5 -top-0.5 h-4 min-w-4',
+                      )}
+                    >
+                      {badge > 99 ? '99+' : badge}
+                    </span>
+                  )}
                 </span>
               )}
             </NavLink>

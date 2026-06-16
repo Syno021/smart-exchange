@@ -40,4 +40,28 @@ class Validator {
             && preg_match('/[0-9]/', $password)
             && preg_match('/[^A-Za-z0-9]/', $password);
     }
+
+    /** 10-digit local number starting with 0 */
+    public static function phone(?string $phone): bool {
+        if ($phone === null || $phone === '') return false;
+        return (bool) preg_match('/^0\d{9}$/', $phone);
+    }
+
+    public static function phoneOptional(?string $phone): bool {
+        if ($phone === null || trim($phone) === '') return true;
+        return self::phone($phone);
+    }
+
+    public static function isPhoneTaken(PDO $db, string $phone, ?int $excludeUserId = null): bool {
+        $sql = 'SELECT user_id FROM users WHERE phone = ?';
+        $params = [$phone];
+        if ($excludeUserId !== null) {
+            $sql .= ' AND user_id != ?';
+            $params[] = $excludeUserId;
+        }
+        $sql .= ' LIMIT 1';
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
+        return (bool) $stmt->fetch();
+    }
 }

@@ -1,4 +1,7 @@
 export type PaymentMethod = 'cash' | 'card' | 'ewallet' | 'loyalty'
+
+/** Payment methods available to customers at checkout (eWallet excluded) */
+export type CustomerPaymentMethod = 'cash' | 'card' | 'loyalty'
 export type SaleStatus =
   | 'completed'
   | 'voided'
@@ -55,7 +58,7 @@ export interface SaleItem {
 
 export interface CreateOnlineOrderPayload {
   items: Array<{ product_id: number; qty: number }>
-  payment_method?: PaymentMethod
+  payment_method?: CustomerPaymentMethod
   delivery_address: string
   delivery_phone: string
   notes?: string

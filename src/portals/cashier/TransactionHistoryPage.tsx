@@ -11,13 +11,10 @@ import {
 } from '@/components'
 import { saleService } from '@/services/sale.service'
 import { formatDate } from '@/lib/utils'
+import { todayIso } from '@/lib/validation'
 import type { Sale } from '@/types/sale.types'
 
 const PAGE_SIZE = 15
-
-function todayIso() {
-  return new Date().toISOString().slice(0, 10)
-}
 
 function monthStartIso() {
   const d = new Date()
@@ -109,6 +106,7 @@ export function TransactionHistoryPage() {
             id="date-from"
             type="date"
             value={dateFrom}
+            max={todayIso()}
             onChange={(e) => {
               setDateFrom(e.target.value)
               setPage(1)
@@ -124,6 +122,7 @@ export function TransactionHistoryPage() {
             id="date-to"
             type="date"
             value={dateTo}
+            max={todayIso()}
             onChange={(e) => {
               setDateTo(e.target.value)
               setPage(1)
