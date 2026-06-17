@@ -121,17 +121,23 @@ class UserController {
 
     public static function update(int $id): void {
         $payload = AuthMiddleware::handle();
-        RoleMiddleware::require($payload, ['admin']);
-
         $body = json_decode(file_get_contents('php://input'), true);
         $db = Database::getInstance();
+
+        $isSelf = (int) $payload['user_id'] === $id;
+
+        if (!$isSelf) {
+            RoleMiddleware::require($payload, ['admin']);
+        } else {
+            $body = array_intersect_key($body ?? [], array_flip(['full_name', 'email', 'phone', 'password']));
+        }
 
         $old = $db->prepare('SELECT user_id, full_name, username, email, phone, role, is_active FROM users WHERE user_id = ?');
         $old->execute([$id]);
         $before = $old->fetch();
         if (!$before) Response::error('User not found', 404);
 
-        if (isset($body['role']) && !Validator::inArray($body['role'], self::$roles)) {
+        if (!$isSelf && isset($body['role']) && !Validator::inArray($body['role'], self::$roles)) {
             Response::error('Invalid role');
         }
         if (!empty($body['email']) && !Validator::email($body['email'])) {
@@ -140,16 +146,16 @@ class UserController {
 
         if (array_key_exists('phone', $body)) {
             $phone = trim($body['phone'] ?? '');
-            if (!Validator::phone($phone)) {
+            if (!Validator::phoneOptional($phone)) {
                 Response::error('Phone must be exactly 10 digits and start with 0', 422);
             }
-            if (Validator::isPhoneTaken($db, $phone, $id)) {
+            if ($phone !== '' && Validator::isPhoneTaken($db, $phone, $id)) {
                 Response::error('This phone number is already registered', 409);
             }
-            $body['phone'] = $phone;
+            $body['phone'] = $phone !== '' ? $phone : null;
         }
 
-        if (isset($body['username'])) {
+        if (!$isSelf && isset($body['username'])) {
             $username = trim($body['username']);
             if (strlen($username) < 3) {
                 Response::error('Username must be at least 3 characters', 422);
@@ -160,10 +166,22 @@ class UserController {
             $body['username'] = $username;
         }
 
+        if ($isSelf && isset($body['full_name'])) {
+            $fullName = trim($body['full_name']);
+            if (strlen($fullName) < 2) {
+                Response::error('Full name must be at least 2 characters', 422);
+            }
+            $body['full_name'] = $fullName;
+        }
+
         $fields = [];
         $params = [];
 
-        foreach (['full_name', 'username', 'email', 'phone', 'role', 'is_active'] as $field) {
+        $allowedFields = $isSelf
+            ? ['full_name', 'email', 'phone']
+            : ['full_name', 'username', 'email', 'phone', 'role', 'is_active'];
+
+        foreach ($allowedFields as $field) {
             if (array_key_exists($field, $body)) {
                 $fields[] = "$field = ?";
                 $params[] = $body[$field];

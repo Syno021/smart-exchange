@@ -38,6 +38,37 @@ class CustomerController {
         Response::paginated($stmt->fetchAll(), $total, $page, $perPage);
     }
 
+    public static function update(int $customerId): void {
+        $payload = AuthMiddleware::handle();
+        $body = json_decode(file_get_contents('php://input'), true);
+        $db = Database::getInstance();
+
+        $stmt = $db->prepare('SELECT customer_id, user_id, address FROM customers WHERE customer_id = ?');
+        $stmt->execute([$customerId]);
+        $customer = $stmt->fetch();
+        if (!$customer) Response::error('Customer not found', 404);
+
+        $isOwner = (int) $customer['user_id'] === (int) $payload['user_id'];
+        if (!$isOwner) {
+            RoleMiddleware::require($payload, ['admin']);
+        }
+
+        if (!array_key_exists('address', $body)) {
+            Response::error('No fields to update', 422);
+        }
+
+        $address = trim($body['address'] ?? '');
+        if ($address !== '' && strlen($address) < 5) {
+            Response::error('Delivery address must be at least 5 characters', 422);
+        }
+
+        $db->prepare('UPDATE customers SET address = ? WHERE customer_id = ?')
+           ->execute([$address !== '' ? $address : null, $customerId]);
+
+        AuditLogger::log($payload['user_id'], 'UPDATE', 'customers', $customerId, $customer, ['address' => $address]);
+        Response::success(null, 'Customer profile updated');
+    }
+
     public static function orders(int $customerId): void {
         AuthMiddleware::handle();
         $db = Database::getInstance();

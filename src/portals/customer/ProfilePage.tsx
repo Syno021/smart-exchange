@@ -9,6 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { useCustomerProfile } from '@/portals/customer/hooks/useCustomerProfile'
+import { authService } from '@/services/auth.service'
+import { customerService } from '@/services/customer.service'
 import { userService } from '@/services/user.service'
 import { useAuthStore } from '@/stores/authStore'
 import { fullNameSchema, phoneOptionalSchema } from '@/lib/validation'
@@ -56,15 +58,25 @@ export function ProfilePage() {
   }, [customer, user, reset])
 
   const mutation = useMutation({
-    mutationFn: (values: ProfileForm) =>
-      userService.update(user!.user_id, {
+    mutationFn: async (values: ProfileForm) => {
+      await userService.update(user!.user_id, {
         full_name: values.full_name,
         email: values.email || undefined,
         phone: values.phone,
-      }),
-    onSuccess: () => {
+      })
+      if (customer?.customer_id) {
+        await customerService.update(customer.customer_id, {
+          address: values.address,
+        })
+      }
+    },
+    onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: ['customer', 'profile'] })
       queryClient.invalidateQueries({ queryKey: ['auth', 'me'] })
+      const { data } = await authService.me()
+      if (data.data) {
+        useAuthStore.setState({ user: data.data, role: data.data.role })
+      }
     },
   })
 

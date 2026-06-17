@@ -80,6 +80,7 @@ match (true) {
 
     // CUSTOMERS
     $resource === 'customers' && $method === 'GET'  && !$id          => CustomerController::index(),
+    $resource === 'customers' && $method === 'PUT'  && is_numeric($id) && !$action => CustomerController::update((int)$id),
     $resource === 'customers' && $method === 'GET'  && $action === 'orders' => CustomerController::orders((int)$id),
 
     // REPORTS
