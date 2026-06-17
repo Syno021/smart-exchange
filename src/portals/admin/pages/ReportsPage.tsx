@@ -43,6 +43,7 @@ import {
   type ColumnDef,
 } from '@/components'
 import { formatDate, formatRand } from '@/lib/utils'
+import { todayIso } from '@/lib/validation'
 import { reportService } from '@/services/report.service'
 import type { CashierPerformanceReport, RecentChangesReport, TopProductsReport } from '@/services/report.service'
 
@@ -243,6 +244,7 @@ export function ReportsPage() {
         label="From"
         type="date"
         value={dateRange.from}
+        max={todayIso()}
         onChange={(e) => setDateRange((d) => ({ ...d, from: e.target.value }))}
         className="w-auto min-w-[160px]"
       />
@@ -250,6 +252,7 @@ export function ReportsPage() {
         label="To"
         type="date"
         value={dateRange.to}
+        max={todayIso()}
         onChange={(e) => setDateRange((d) => ({ ...d, to: e.target.value }))}
         className="w-auto min-w-[160px]"
       />

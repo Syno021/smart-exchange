@@ -13,6 +13,7 @@ import {
   type ColumnDef,
 } from '@/components'
 import { reportService } from '@/services/report.service'
+import { todayIso } from '@/lib/validation'
 import type { TopProductsReport } from '@/services/report.service'
 
 type TrendProduct = TopProductsReport['products'][number]
@@ -94,12 +95,14 @@ export function ProductTrendsPage() {
           label="From"
           type="date"
           value={dateFrom}
+          max={todayIso()}
           onChange={(e) => setDateFrom(e.target.value)}
         />
         <Input
           label="To"
           type="date"
           value={dateTo}
+          max={todayIso()}
           onChange={(e) => setDateTo(e.target.value)}
         />
       </div>

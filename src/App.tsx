@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
+import { QueryRefetchOnNavigate } from './components/shared/QueryRefetchOnNavigate'
 import { useAuthStore } from './stores/authStore'
 import { AuthLayout } from './layouts/AuthLayout'
 import { AdminLayout } from './layouts/AdminLayout'
@@ -18,7 +19,9 @@ function RoleRedirect() {
 
 export default function App() {
   return (
-    <Routes>
+    <>
+      <QueryRefetchOnNavigate />
+      <Routes>
       <Route element={<AuthLayout />}>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
@@ -32,5 +35,6 @@ export default function App() {
       <Route path="/" element={<RoleRedirect />} />
       <Route path="*" element={<RoleRedirect />} />
     </Routes>
+    </>
   )
 }

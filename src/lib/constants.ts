@@ -23,7 +23,7 @@ import {
   Warehouse,
 } from 'lucide-react'
 import type { UserRole } from '../types/auth.types'
-import type { PaymentMethod } from '../types/sale.types'
+import type { CustomerPaymentMethod, PaymentMethod } from '../types/sale.types'
 import type { POStatus } from '../types/order.types'
 import type { SaleStatus } from '../types/sale.types'
 
@@ -60,12 +60,15 @@ export const STATUS_COLORS: Record<string, string> = {
   failed: 'bg-danger-100 text-danger-600',
 }
 
-export const PAYMENT_METHODS: Array<{ value: PaymentMethod; label: string }> = [
+/** Customer checkout / cart payment options — eWallet is not offered */
+export const CUSTOMER_PAYMENT_METHODS: Array<{ value: CustomerPaymentMethod; label: string }> = [
   { value: 'cash', label: 'Cash' },
   { value: 'card', label: 'Card' },
-  { value: 'ewallet', label: 'E-Wallet' },
   { value: 'loyalty', label: 'Loyalty Points' },
 ]
+
+/** @deprecated Use CUSTOMER_PAYMENT_METHODS for customer checkout */
+export const PAYMENT_METHODS: Array<{ value: PaymentMethod; label: string }> = CUSTOMER_PAYMENT_METHODS
 
 export const PO_STATUS_LABELS: Record<POStatus, string> = {
   draft: 'Draft',
@@ -89,6 +92,7 @@ export interface NavItem {
   label: string
   path: string
   icon: LucideIcon
+  badge?: number
 }
 
 export const NAV: Record<UserRole, NavItem[]> = {

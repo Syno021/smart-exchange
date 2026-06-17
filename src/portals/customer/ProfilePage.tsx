@@ -11,14 +11,15 @@ import { PageHeader } from '@/components/shared/PageHeader'
 import { useCustomerProfile } from '@/portals/customer/hooks/useCustomerProfile'
 import { userService } from '@/services/user.service'
 import { useAuthStore } from '@/stores/authStore'
+import { fullNameSchema, phoneOptionalSchema } from '@/lib/validation'
 import type { AxiosError } from 'axios'
 import type { ApiResponse } from '@/types/api.types'
 
 const profileSchema = z.object({
-  full_name: z.string().min(1, 'Full name is required'),
+  full_name: fullNameSchema,
   email: z.string().email('Invalid email').optional().or(z.literal('')),
-  phone: z.string().optional(),
-  address: z.string().optional(),
+  phone: phoneOptionalSchema,
+  address: z.string().max(255, 'Address is too long').optional(),
 })
 
 type ProfileForm = z.infer<typeof profileSchema>
@@ -93,7 +94,13 @@ export function ProfilePage() {
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <Input label="Full name" error={errors.full_name?.message} {...register('full_name')} />
               <Input label="Email" type="email" error={errors.email?.message} {...register('email')} />
-              <Input label="Phone" error={errors.phone?.message} {...register('phone')} />
+              <Input
+                label="Phone"
+                placeholder="0XXXXXXXXX"
+                maxLength={10}
+                error={errors.phone?.message}
+                {...register('phone')}
+              />
               <Input label="Delivery address" error={errors.address?.message} {...register('address')} />
 
               {user && (

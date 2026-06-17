@@ -12,6 +12,7 @@ import {
 import { saleService } from '@/services/sale.service'
 import { SALE_STATUS_LABELS } from '@/lib/constants'
 import { formatDate, toNumber } from '@/lib/utils'
+import { todayIso } from '@/lib/validation'
 import type { Sale, SaleStatus } from '@/types/sale.types'
 
 const STATUS_OPTIONS = [
@@ -98,12 +99,14 @@ export function SalesMonitorPage() {
           label="From"
           type="date"
           value={dateFrom}
+          max={todayIso()}
           onChange={(e) => setDateFrom(e.target.value)}
         />
         <Input
           label="To"
           type="date"
           value={dateTo}
+          max={todayIso()}
           onChange={(e) => setDateTo(e.target.value)}
         />
         <SelectField

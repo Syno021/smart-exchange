@@ -64,6 +64,12 @@ class SaleController {
 
         if (empty($items)) Response::error('Sale must have at least one item');
 
+        $paymentMethod = $body['payment_method'] ?? 'cash';
+        $allowedPayments = ['cash', 'card', 'loyalty'];
+        if (!Validator::inArray($paymentMethod, $allowedPayments)) {
+            Response::error('Invalid payment method. Allowed: cash, card, or loyalty points.', 422);
+        }
+
         $date    = date('Ymd');
         $count   = $db->query("SELECT COUNT(*)+1 FROM sales WHERE DATE(created_at) = CURDATE()")->fetchColumn();
         $saleRef = sprintf('USM-%s-%04d', $date, $count);
@@ -109,17 +115,45 @@ class SaleController {
             $total    = round($subtotal - $discount + $tax, 2);
             $paid     = (float)($body['amount_paid'] ?? $total);
             $change   = max(0, round($paid - $total, 2));
+            $pointsEarned  = (int) floor($total);
+            $pointsRedeemed = 0;
+
+            if ($paymentMethod === 'loyalty') {
+                $customerId = $body['customer_id'] ?? null;
+                if (!$customerId) {
+                    Response::error('Link a loyalty customer before paying with points', 422);
+                }
+                $pointsNeeded = (int) ceil($total);
+                $custLock = $db->prepare('SELECT loyalty_points FROM customers WHERE customer_id = ? FOR UPDATE');
+                $custLock->execute([$customerId]);
+                $custRow = $custLock->fetch();
+                if (!$custRow) {
+                    Response::error('Customer not found', 404);
+                }
+                $availablePoints = (int) $custRow['loyalty_points'];
+                if ($availablePoints < $pointsNeeded) {
+                    Response::error(
+                        "Insufficient loyalty points. This sale requires {$pointsNeeded} points but the customer has {$availablePoints}.",
+                        422
+                    );
+                }
+                $pointsRedeemed = $pointsNeeded;
+                $pointsEarned = 0;
+                $paid = $total;
+                $change = 0;
+            }
 
             $db->prepare('
                 INSERT INTO sales (sale_ref,cashier_id,customer_id,subtotal,discount_amt,tax_amt,
-                  total_amt,amount_paid,change_given,payment_method,points_earned,notes)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+                  total_amt,amount_paid,change_given,payment_method,points_earned,points_redeemed,notes)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
             ')->execute([
                 $saleRef, $payload['user_id'],
                 $body['customer_id'] ?? null,
                 $subtotal, $discount, $tax, $total, $paid, $change,
-                $body['payment_method'] ?? 'cash',
-                (int) floor($total),
+                $paymentMethod,
+                $pointsEarned,
+                $pointsRedeemed,
                 $body['notes'] ?? null,
             ]);
             $saleId = (int) $db->lastInsertId();
@@ -139,7 +173,10 @@ class SaleController {
                 ]);
             }
 
-            if (!empty($body['customer_id'])) {
+            if ($paymentMethod === 'loyalty' && !empty($body['customer_id'])) {
+                $db->prepare('UPDATE customers SET loyalty_points = loyalty_points - ?, total_spent = total_spent + ? WHERE customer_id = ?')
+                   ->execute([$pointsRedeemed, $total, $body['customer_id']]);
+            } elseif (!empty($body['customer_id'])) {
                 $db->prepare('UPDATE customers SET loyalty_points = loyalty_points + ?, total_spent = total_spent + ? WHERE customer_id = ?')
                    ->execute([(int) floor($total), $total, $body['customer_id']]);
             }
@@ -172,6 +209,20 @@ class SaleController {
 
         if (empty($items)) Response::error('Order must have at least one item');
         Validator::failIfErrors(Validator::required($body, ['delivery_address', 'delivery_phone']));
+
+        $deliveryPhone = trim($body['delivery_phone']);
+        if (!Validator::phone($deliveryPhone)) {
+            Response::error('Delivery phone must be exactly 10 digits and start with 0', 422);
+        }
+        if (strlen(trim($body['delivery_address'])) < 5) {
+            Response::error('Delivery address must be at least 5 characters', 422);
+        }
+
+        $paymentMethod = $body['payment_method'] ?? 'card';
+        $allowedCustomerPayments = ['cash', 'card', 'loyalty'];
+        if (!Validator::inArray($paymentMethod, $allowedCustomerPayments)) {
+            Response::error('Invalid payment method. Allowed: cash, card, or loyalty points.', 422);
+        }
 
         $custStmt = $db->prepare('SELECT customer_id FROM customers WHERE user_id = ?');
         $custStmt->execute([$payload['user_id']]);
@@ -218,11 +269,32 @@ class SaleController {
             $tax   = round($subtotal * 0.15, 2);
             $total = round($subtotal + $tax, 2);
 
+            $pointsRedeemed = 0;
+            $amountPaid = 0;
+
+            if ($paymentMethod === 'loyalty') {
+                $pointsNeeded = (int) ceil($total);
+                $custLock = $db->prepare('SELECT loyalty_points FROM customers WHERE customer_id = ? FOR UPDATE');
+                $custLock->execute([$customerId]);
+                $custRow = $custLock->fetch();
+                $availablePoints = (int) ($custRow['loyalty_points'] ?? 0);
+                if ($availablePoints < $pointsNeeded) {
+                    Response::error(
+                        "Insufficient loyalty points. This order requires {$pointsNeeded} points but you have {$availablePoints}.",
+                        422
+                    );
+                }
+                $db->prepare('UPDATE customers SET loyalty_points = loyalty_points - ? WHERE customer_id = ?')
+                   ->execute([$pointsNeeded, $customerId]);
+                $pointsRedeemed = $pointsNeeded;
+                $amountPaid = $total;
+            }
+
             $db->prepare('
                 INSERT INTO sales (sale_ref, cashier_id, customer_id, subtotal, discount_amt, tax_amt,
-                  total_amt, amount_paid, change_given, payment_method, status, points_earned, notes,
+                  total_amt, amount_paid, change_given, payment_method, status, points_earned, points_redeemed, notes,
                   delivery_address, delivery_phone)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             ')->execute([
                 $saleRef,
                 null,
@@ -231,14 +303,15 @@ class SaleController {
                 0,
                 $tax,
                 $total,
+                $amountPaid,
                 0,
-                0,
-                $body['payment_method'] ?? 'card',
+                $paymentMethod,
                 'pending',
                 0,
+                $pointsRedeemed,
                 $body['notes'] ?? null,
                 trim($body['delivery_address']),
-                trim($body['delivery_phone']),
+                $deliveryPhone,
             ]);
             $saleId = (int) $db->lastInsertId();
 
@@ -346,11 +419,16 @@ class SaleController {
                ->execute([$id]);
 
             if (!empty($sale['customer_id'])) {
-                $db->prepare('UPDATE customers SET loyalty_points = loyalty_points + ?, total_spent = total_spent + ? WHERE customer_id = ?')
-                   ->execute([(int) floor($total), $total, $sale['customer_id']]);
+                if ($sale['payment_method'] === 'loyalty') {
+                    $db->prepare('UPDATE customers SET total_spent = total_spent + ? WHERE customer_id = ?')
+                       ->execute([$total, $sale['customer_id']]);
+                } else {
+                    $db->prepare('UPDATE customers SET loyalty_points = loyalty_points + ?, total_spent = total_spent + ? WHERE customer_id = ?')
+                       ->execute([(int) floor($total), $total, $sale['customer_id']]);
 
-                $db->prepare('UPDATE sales SET points_earned = ? WHERE sale_id = ?')
-                   ->execute([(int) floor($total), $id]);
+                    $db->prepare('UPDATE sales SET points_earned = ? WHERE sale_id = ?')
+                       ->execute([(int) floor($total), $id]);
+                }
             }
 
             $db->commit();

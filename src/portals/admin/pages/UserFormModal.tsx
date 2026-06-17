@@ -14,6 +14,12 @@ import {
   getPasswordStrength,
   validateStrongPassword,
 } from '@/lib/password'
+import {
+  emailOptionalSchema,
+  fullNameSchema,
+  phoneSchema,
+  usernameSchema,
+} from '@/lib/validation'
 import type { UserRole } from '@/types/auth.types'
 import type { User } from '@/types/user.types'
 
@@ -23,10 +29,10 @@ const roleOptions = (Object.keys(ROLES) as UserRole[]).map((role) => ({
 }))
 
 const baseSchema = z.object({
-  full_name: z.string().min(1, 'Full name is required'),
-  username: z.string().min(3, 'Username must be at least 3 characters'),
-  email: z.string().email('Invalid email').optional().or(z.literal('')),
-  phone: z.string().optional(),
+  full_name: fullNameSchema,
+  username: usernameSchema,
+  email: emailOptionalSchema,
+  phone: phoneSchema,
   password: z.string().optional(),
   role: z.enum(['admin', 'manager', 'cashier', 'customer', 'supplier']),
   is_active: z.enum(['1', '0']),
@@ -43,7 +49,7 @@ export interface UserFormModalProps {
     full_name: string
     username: string
     email?: string
-    phone?: string
+    phone: string
     password?: string
     role: UserRole
     is_active: boolean
@@ -161,7 +167,7 @@ export function UserFormModal({
       full_name: values.full_name.trim(),
       username: values.username.trim(),
       email: values.email?.trim() || undefined,
-      phone: values.phone?.trim() || undefined,
+      phone: values.phone.trim(),
       password: trimmedPassword || undefined,
       role: values.role,
       is_active: values.is_active === '1',
@@ -199,7 +205,13 @@ export function UserFormModal({
           error={errors.email?.message}
           {...register('email')}
         />
-        <Input label="Phone" error={errors.phone?.message} {...register('phone')} />
+        <Input
+          label="Phone"
+          placeholder="0XXXXXXXXX"
+          maxLength={10}
+          error={errors.phone?.message}
+          {...register('phone')}
+        />
 
         <div className="space-y-2">
           <div className="flex items-center justify-between">

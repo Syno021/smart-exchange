@@ -17,16 +17,17 @@ import {
 } from '@/components'
 import { supplierService } from '@/services/supplier.service'
 import { formatDate } from '@/lib/utils'
+import { emailOptionalSchema, phoneOptionalSchema } from '@/lib/validation'
 import type { Supplier } from '@/types/supplier.types'
 
 const supplierSchema = z.object({
-  company_name: z.string().min(1, 'Company name is required'),
-  contact_name: z.string().optional(),
-  phone: z.string().optional(),
-  email: z.string().email('Invalid email').optional().or(z.literal('')),
-  address: z.string().optional(),
-  tax_number: z.string().optional(),
-  payment_terms: z.string().optional(),
+  company_name: z.string().min(2, 'Company name must be at least 2 characters').max(100),
+  contact_name: z.string().max(100).optional(),
+  phone: phoneOptionalSchema,
+  email: emailOptionalSchema,
+  address: z.string().max(255).optional(),
+  tax_number: z.string().max(50).optional(),
+  payment_terms: z.string().max(100).optional(),
   is_active: z.boolean(),
 })
 
